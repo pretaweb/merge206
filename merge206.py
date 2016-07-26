@@ -1,11 +1,11 @@
 """Merge 206 partial requests in a log file.
 
 Usage:
-  merge206.py [-d SECONDS] [-p PATTERN] [-i FILE]
+  merge206.py [-p PATTERN] [-d SECONDS] [-i FILE]
 
 Options:
   -i FILE, --input FILE             Logfile to read
-  -p PATTERN, --pattern PATTERN     Apache log format specification
+  -p PATTERN, --pattern PATTERN     Apache log format specification. see https://github.com/rory/apache-log-parser#supported-values
   -d SECONDS, --delay SECONDS       The max time between 206 partial requests [default: 600]
   -h --help                         Show this screen.
   --version                         Show version.
