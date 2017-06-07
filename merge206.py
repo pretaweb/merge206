@@ -20,15 +20,12 @@ import datetime
 __author__ = 'dylanjay'
 
 import apache_log_parser
+from StringIO import StringIO
 
  # supported log file formats
 APACHE_COMBINED="%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\""
 APACHE_COMMON="%h %l %u %t \"%r\" %>s %b"
 
-
-# keep last 1min worth of log entries and look them up based on if its the same
-# request repeated
-buffer = OrderedDict()
 
 # similar request keys
 
@@ -47,6 +44,56 @@ def hash_entry(data):
 
 
 def merge_recent_entries(input, output, pattern=APACHE_COMBINED, delay=600):
+    """
+    If we get several requests in row that look like from the same user then we will merge
+
+    >>> log = StringIO('''
+    ... 1.1.1.1 - - [26/Nov/2015:04:58:59 +0000] "GET /blah HTTP/1.1" 200 2 "http://foo.com" "mybrowser"
+    ... 1.1.1.1 - - [26/Nov/2015:04:59:05 +0000] "GET /blah HTTP/1.1" 206 742750 "http://foo.com" "mybrowser"
+    ... 1.1.1.1 - - [26/Nov/2015:04:59:07 +0000] "GET /blah HTTP/1.1" 206 69475 "http://foo.com" "mybrowser"
+    ... 1.1.1.1 - - [26/Nov/2015:04:59:08 +0000] "GET /blah HTTP/1.1" 206 3939 "http://foo.com" "mybrowser"
+    ... '''.strip())
+    >>> merge_recent_entries(log, sys.stdout)
+    1.1.1.1 - - [26/Nov/2015:04:58:59 +0000] "GET /blah HTTP/1.1" 200 816166 "http://foo.com" "mybrowser"
+
+    If from a different client IP then we won't merge
+    >>> log = StringIO('''
+    ... 1.1.1.1 - - [26/Nov/2015:04:58:59 +0000] "GET /blah HTTP/1.1" 200 2 "http://foo.com" "mybrowser"
+    ... 1.1.1.2 - - [26/Nov/2015:04:59:05 +0000] "GET /blah HTTP/1.1" 206 742750 "http://foo.com" "mybrowser"
+    ... '''.strip())
+    >>> merge_recent_entries(log, sys.stdout)
+    1.1.1.1 - - [26/Nov/2015:04:58:59 +0000] "GET /blah HTTP/1.1" 200 2 "http://foo.com" "mybrowser"
+    1.1.1.2 - - [26/Nov/2015:04:59:05 +0000] "GET /blah HTTP/1.1" 206 742750 "http://foo.com" "mybrowser"
+
+    If from a different browser then we won't merge
+    >>> log = StringIO('''
+    ... 1.1.1.1 - - [26/Nov/2015:04:58:59 +0000] "GET /blah HTTP/1.1" 200 2 "http://foo.com" "mybrowser"
+    ... 1.1.1.1 - - [26/Nov/2015:04:59:05 +0000] "GET /blah HTTP/1.1" 206 742750 "http://foo.com" "notmybrowser"
+    ... '''.strip())
+    >>> merge_recent_entries(log, sys.stdout)
+    1.1.1.1 - - [26/Nov/2015:04:58:59 +0000] "GET /blah HTTP/1.1" 200 2 "http://foo.com" "mybrowser"
+    1.1.1.1 - - [26/Nov/2015:04:59:05 +0000] "GET /blah HTTP/1.1" 206 742750 "http://foo.com" "notmybrowser"
+
+    A 404 or 500 won't get merged
+    >>> log = StringIO('''
+    ... 1.1.1.1 - - [26/Nov/2015:04:58:59 +0000] "GET /blah HTTP/1.1" 404 2 "http://foo.com" "mybrowser"
+    ... 1.1.1.1 - - [26/Nov/2015:04:58:59 +0000] "GET /blah2 HTTP/1.1" 500 2 "http://foo.com" "mybrowser"
+    ... 1.1.1.1 - - [26/Nov/2015:04:59:05 +0000] "GET /blah HTTP/1.1" 206 742750 "http://foo.com" "mybrowser"
+    ... 1.1.1.1 - - [26/Nov/2015:04:59:05 +0000] "GET /blah2 HTTP/1.1" 206 742750 "http://foo.com" "mybrowser"
+    ... '''.strip())
+    >>> merge_recent_entries(log, sys.stdout)
+    1.1.1.1 - - [26/Nov/2015:04:58:59 +0000] "GET /blah HTTP/1.1" 404 2 "http://foo.com" "mybrowser"
+    1.1.1.1 - - [26/Nov/2015:04:59:05 +0000] "GET /blah2 HTTP/1.1" 500 742750 "http://foo.com" "mybrowser"
+    1.1.1.1 - - [26/Nov/2015:04:59:05 +0000] "GET /blah HTTP/1.1" 206 742750 "http://foo.com" "mybrowser"
+    1.1.1.1 - - [26/Nov/2015:04:59:05 +0000] "GET /blah2 HTTP/1.1" 206 742750 "http://foo.com" "mybrowser"
+    """
+
+
+    # keep last 1min worth of log entries and look them up based on if its the same
+    # request repeated
+    buffer = OrderedDict()
+
+    
     if not pattern:
         pattern = APACHE_COMBINED
     line_parser=apache_log_parser.make_parser(pattern)
