@@ -10,6 +10,12 @@ that two 206 requests from the same IP, for the same url, with the same user age
 come from the same user, or even the same user in two different browser tabs.
 Also the same user might pause for a long time before playing again.
 
+Adjusting ```--delay argument``` can have a big effect on the total number of requests.
+If users typically pause videos for a long time, or take a long time to flip pages
+in a in browser pdf viewer, then would would want a long delay. However the longer
+the delay, the more chance of two different users with the same fingerprint being
+wrongly merge into a single request.
+
 
 - The combined request will be first request encountered except for the response
   bytes which will be a total.
@@ -32,3 +38,22 @@ Options:
   --version                         Show version.
 
 ```
+
+Changes
+========
+
+1.1 (2017-6-8)
+------------
+- Fixed a bug that meant 404 and other error codes got merged with 206
+- Fixed some perforance issues
+- Put in some tests
+
+1.0
+---
+Initial version
+
+Known Issues
+============
+
+- Currently there is a bug that two 200 requests within the delay perion will get merged.
+- merged requests don't get output in chronological order.
