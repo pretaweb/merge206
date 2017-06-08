@@ -116,6 +116,10 @@ def merge_recent_entries(input, output, pattern=APACHE_COMBINED, delay=600):
     def hash_entry(data):
         # we need to make sure we only have a single mergable item in the buffer at anyone time
         # We can only merge 200 and 206 so they get the same hash.
+
+        #TODO currently this allows a 200 to be merged with a 200 which isn't right
+        # To fix have to have some way to make the new 200 have a different hash from
+        # the old one?
         keys = KEYS + (['status'] if data['status'] not in ['200','206'] else [])
         return tuple( data[key] for key in  keys)
 
@@ -125,7 +129,7 @@ def merge_recent_entries(input, output, pattern=APACHE_COMBINED, delay=600):
     for line in input.readlines():
         data = line_parser(line)
         # get rid of too old entries at the end of our buffer
-        for oldline, oldtime, _ in buffer.values():
+        for oldline, oldtime, _ in buffer.itervalues():
             if data['time_received_utc_datetimeobj'] - oldtime > delay:
                 output.write(oldline)
                 buffer.popitem(last=False)
@@ -154,6 +158,7 @@ def merge_recent_entries(input, output, pattern=APACHE_COMBINED, delay=600):
         # Important we add this back in with the timestamp of the latest in the merge
         # not the original.
         buffer[hash] = (line, data['time_received_utc_datetimeobj'], data)
+        #TODO: this puts the merged line out of sequence which can cause problems
 
     for line, _, _ in buffer.values():
             output.write(line)
