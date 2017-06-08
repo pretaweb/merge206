@@ -100,7 +100,20 @@ def merge_recent_entries(input, output, pattern=APACHE_COMBINED, delay=600):
     ... '''.strip()), sys.stdout)
     1.1.1.1 - - [26/Nov/2015:04:58:59 +0000] "GET /blah HTTP/1.1" 200 2 "http://foo.com" "mybrowser"
     1.1.1.1 - - [26/Nov/2015:04:59:05 +0000] "GET /blah HTTP/1.1" 200 742750 "http://foo.com" "mybrowser"
-    """
+
+    The merged request should be in the right order when output
+    >>> merge_recent_entries(StringIO('''
+    ... 2.2.2.2 - - [26/Nov/2015:04:51:05 +0000] "GET /1 HTTP/1.1" 206 742750 "http://foo.com" "mybrowser"
+    ... 1.1.1.1 - - [26/Nov/2015:04:52:59 +0000] "GET /blah HTTP/1.1" 200 2 "http://foo.com" "mybrowser"
+    ... 3.3.3.3 - - [26/Nov/2015:04:53:05 +0000] "GET /2 HTTP/1.1" 206 742750 "http://foo.com" "mybrowser"
+    ... 1.1.1.1 - - [26/Nov/2015:04:54:05 +0000] "GET /blah HTTP/1.1" 206 742750 "http://foo.com" "mybrowser"
+    ... 3.3.3.3 - - [26/Nov/2015:04:55:05 +0000] "GET /3 HTTP/1.1" 206 742750 "http://foo.com" "mybrowser"
+    ... '''.strip()), sys.stdout)
+    2.2.2.2 - - [26/Nov/2015:04:51:05 +0000] "GET /1 HTTP/1.1" 206 742750 "http://foo.com" "mybrowser"
+    1.1.1.1 - - [26/Nov/2015:04:52:59 +0000] "GET /blah HTTP/1.1" 200 742752 "http://foo.com" "mybrowser"
+    3.3.3.3 - - [26/Nov/2015:04:53:05 +0000] "GET /2 HTTP/1.1" 206 742750 "http://foo.com" "mybrowser"
+    3.3.3.3 - - [26/Nov/2015:04:55:05 +0000] "GET /3 HTTP/1.1" 206 742750 "http://foo.com" "mybrowser"    """
+
 
     if not pattern:
         pattern = APACHE_COMBINED
