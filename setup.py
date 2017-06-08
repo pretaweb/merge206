@@ -3,11 +3,16 @@ import sys, os
 
 version = '1.1'
 
+try:
+    import pypandoc
+    long_description = pypandoc.convert('README.md', 'rst')
+except(IOError, ImportError):
+    long_description = open('README.md').read()
+
 setup(name='merge206',
       version=version,
       description="Web log util to arregate 206 requests",
-      long_description="""\
-"""+open("README.md").read(),
+      long_description=long_description,
       classifiers=[], # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
       keywords='apache, nginx, log analyzer',
       author='Dylan Jay',

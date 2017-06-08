@@ -1,16 +1,19 @@
-Merge206
-========
+# Merge206
 
 Small web log util which parses web logs such as apache or nginx and will attempt
 to find 206 requests which are likely related to an original 200 or 206 request
-and aggregate them into a single request.
+and aggregate them into a single request. It does this by fingerprinting a request
+to guess if it was from the same user. The fingerprint is based on
+'request_header_referer', 'remote_user', 'request_header_user_agent',
+'request_http_ver', 'request_method', 'request_url', 'remote_host'.
+
 
 WARNING: The resulting log will likely be inaccurate. There is no way to know
 that two 206 requests from the same IP, for the same url, with the same user agent,
 come from the same user, or even the same user in two different browser tabs.
 Also the same user might pause for a long time before playing again.
 
-Adjusting ```--delay argument``` can have a big effect on the total number of requests.
+Adjusting ```--delay``` argument can have a big effect on the total number of requests.
 If users typically pause videos for a long time, or take a long time to flip pages
 in a in browser pdf viewer, then would would want a long delay. However the longer
 the delay, the more chance of two different users with the same fingerprint being
@@ -23,8 +26,7 @@ wrongly merge into a single request.
   This means that log data will not be output in chronological order according
   to the timestamps
 
-Usage
-=====
+## Usage
 
 ```
 Usage:
@@ -39,21 +41,19 @@ Options:
 
 ```
 
-Changes
-========
+## Changes
 
-1.1 (2017-6-8)
-------------
+### 1.1 (2017-6-8)
+
 - Fixed a bug that meant 404 and other error codes got merged with 206
 - Fixed some perforance issues
 - Put in some tests
 
-1.0
----
+### 1.0
+
 Initial version
 
-Known Issues
-============
+## Known Issues
 
 - Currently there is a bug that two 200 requests within the delay perion will get merged.
 - merged requests don't get output in chronological order.
