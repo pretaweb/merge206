@@ -7,6 +7,7 @@ Options:
   -i FILE, --input FILE             Logfile to read
   -p PATTERN, --pattern PATTERN     Apache log format specification. see https://github.com/rory/apache-log-parser#supported-values
   -d SECONDS, --delay SECONDS       The max time between 206 partial requests [default: 600]
+  -k KEYS, --keys KEYS              Request keys [default: 'request_header_referer remote_user request_header_user_agent request_http_ver request_method request_url remote_host']
   -h --help                         Show this screen.
   --version                         Show version.
 
@@ -31,11 +32,9 @@ APACHE_COMMON="%h %l %u %t \"%r\" %>s %b"
 
 KEYS = ['request_header_referer', 'remote_user', 'request_header_user_agent', 'request_http_ver', 'request_method', 'request_url', 'remote_host']
 
- #'response_bytes_clf']
 
-
-
-def merge_recent_entries(input, output, pattern=APACHE_COMBINED, delay=600):
+def merge_recent_entries(
+        input, output, pattern=APACHE_COMBINED, delay=600, keys=''):
     """
     If we get several requests in row that look like from the same user then we will merge
 
@@ -118,6 +117,10 @@ def merge_recent_entries(input, output, pattern=APACHE_COMBINED, delay=600):
     if not pattern:
         pattern = APACHE_COMBINED
     delay = datetime.timedelta(seconds=delay)
+    
+    keys_list = KEYS
+    if keys:
+        keys_list = keys.split()
 
     line_parser=apache_log_parser.make_parser(pattern)
 
@@ -126,14 +129,14 @@ def merge_recent_entries(input, output, pattern=APACHE_COMBINED, delay=600):
     buffer = OrderedDict()
 
 
-    def hash_entry(data):
+    def hash_entry(data, keys_entry):
         # we need to make sure we only have a single mergable item in the buffer at anyone time
         # We can only merge 200 and 206 so they get the same hash.
 
         #TODO currently this allows a 200 to be merged with a 200 which isn't right
         # To fix have to have some way to make the new 200 have a different hash from
         # the old one?
-        keys = KEYS + (['status'] if data['status'] not in ['200','206'] else [])
+        keys = keys_entry + (['status'] if data['status'] not in ['200','206'] else [])
         return tuple( data[key] for key in  keys)
 
 
@@ -149,7 +152,7 @@ def merge_recent_entries(input, output, pattern=APACHE_COMBINED, delay=600):
             else:
                 break
 
-        hash = hash_entry(data)
+        hash = hash_entry(data, keys_list)
         if hash not in buffer:
             buffer[hash] = (line, data['time_received_utc_datetimeobj'], data)
             continue
@@ -185,8 +188,9 @@ def main():
         input = sys.stdin
     pat = arguments.get('--pattern', None)
     delay = int(arguments.get('--delay'))
+    keys = arguments.get('--keys', '')
 
-    merge_recent_entries(input, sys.stdout, pattern=pat, delay=delay)
+    merge_recent_entries(input, sys.stdout, pattern=pat, delay=delay, keys=keys)
 
 if __name__ == '__main__':
     main()
