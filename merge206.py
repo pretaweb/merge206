@@ -176,7 +176,7 @@ def merge_recent_entries(
         buffer[hash] = (line, data['time_received_utc_datetimeobj'], data)
         #TODO: this puts the merged line out of sequence which can cause problems
 
-    for line, _, _ in buffer.values():
+    for line, _, _ in buffer.itervalues():
             output.write(line)
 
 def main():
