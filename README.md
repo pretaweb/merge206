@@ -36,12 +36,15 @@ Options:
   -i FILE, --input FILE             Logfile to read
   -p PATTERN, --pattern PATTERN     Apache log format specification. see https://github.com/rory/apache-log-parser#supported-values
   -d SECONDS, --delay SECONDS       The max time between 206 partial requests [default: 600]
+  -k KEYS, --keys KEYS              Request keys [default: 'request_header_referer remote_user request_header_user_agent request_http_ver request_method request_url remote_host']
   -h --help                         Show this screen.
   --version                         Show version.
-
 ```
 
 ## Changes
+
+### 1.2 (2017-10-06)
+- Add keys option to determine when a request should be merged with another
 
 ### 1.1 (2017-6-8)
 
