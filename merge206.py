@@ -1,12 +1,13 @@
 """Merge 206 partial requests in a log file.
 
 Usage:
-  merge206.py [-p PATTERN] [-d SECONDS] [-i FILE]
+  merge206.py [-p PATTERN] [-d SECONDS] [-t FMT] [-i FILE]
 
 Options:
   -i FILE, --input FILE             Logfile to read
   -p PATTERN, --pattern PATTERN     Apache log format specification. see https://github.com/rory/apache-log-parser#supported-values
   -d SECONDS, --delay SECONDS       The max time between 206 partial requests [default: 600]
+  -t FMT, --time_format FMT         Time format if apache. Use %{received}t to match datetime in your log pattern. In Strftime format.
   -k KEYS, --keys KEYS              Request keys [default: 'request_header_referer remote_user request_header_user_agent request_http_ver request_method request_url remote_host']
   -h --help                         Show this screen.
   --version                         Show version.
@@ -34,7 +35,7 @@ KEYS = ['request_header_referer', 'remote_user', 'request_header_user_agent', 'r
 
 
 def merge_recent_entries(
-        input, output, pattern=APACHE_COMBINED, delay=600, keys=''):
+        input, output, pattern=APACHE_COMBINED, delay=600, time_format=None, keys=''):
     """
     If we get several requests in row that look like from the same user then we will merge
 
@@ -137,13 +138,19 @@ def merge_recent_entries(
         # To fix have to have some way to make the new 200 have a different hash from
         # the old one?
         keys = keys_entry + (['status'] if data['status'] not in ['200','206'] else [])
-        return tuple( data[key] for key in  keys)
+        return tuple( data.get(key,None) for key in  keys)
 
 
 
     #import pdb; pdb.set_trace()
     for line in input.readlines():
         data = line_parser(line)
+        time_r = data.get('time_received_utc_datetimeobj', None)
+        if time_r is None and time_format is not None:
+            time_r = data.get('time_received', None)
+            time_r = datetime.datetime.strptime(time_r, time_format)
+            data['time_received_utc_datetimeobj'] = time_r
+
         # get rid of too old entries at the end of our buffer
         for oldline, oldtime, _ in buffer.itervalues():
             if data['time_received_utc_datetimeobj'] - oldtime > delay:
@@ -153,8 +160,11 @@ def merge_recent_entries(
                 break
 
         hash = hash_entry(data, keys_list)
+        if None in hash:
+            #TODO: should do warning on first occurance?
+            pass
         if hash not in buffer:
-            buffer[hash] = (line, data['time_received_utc_datetimeobj'], data)
+            buffer[hash] = (line, time_r, data)
             continue
 
         # we have a line in the buffer we can merge with
@@ -189,8 +199,9 @@ def main():
     pat = arguments.get('--pattern', None)
     delay = int(arguments.get('--delay'))
     keys = arguments.get('--keys', '')
+    time_format = arguments.get('--time_format', None)
 
-    merge_recent_entries(input, sys.stdout, pattern=pat, delay=delay, keys=keys)
+    merge_recent_entries(input, sys.stdout, pattern=pat, delay=delay, time_format=time_format, keys=keys)
 
 if __name__ == '__main__':
     main()

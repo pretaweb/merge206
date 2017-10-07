@@ -30,12 +30,13 @@ wrongly merge into a single request.
 
 ```
 Usage:
-  merge206.py [-p PATTERN] [-d SECONDS] [-i FILE]
+  merge206.py [-p PATTERN] [-d SECONDS] [-t FMT] [-i FILE]
 
 Options:
   -i FILE, --input FILE             Logfile to read
   -p PATTERN, --pattern PATTERN     Apache log format specification. see https://github.com/rory/apache-log-parser#supported-values
   -d SECONDS, --delay SECONDS       The max time between 206 partial requests [default: 600]
+  -t FMT, --time_format FMT         Time format if apache. Use %{received}t to match datetime in your log pattern. In Strftime format.
   -k KEYS, --keys KEYS              Request keys [default: 'request_header_referer remote_user request_header_user_agent request_http_ver request_method request_url remote_host']
   -h --help                         Show this screen.
   --version                         Show version.
@@ -45,6 +46,7 @@ Options:
 
 ### 1.2 (2017-10-06)
 - Add keys option to determine when a request should be merged with another
+- Add datetime format option if not using apache
 
 ### 1.1 (2017-6-8)
 
